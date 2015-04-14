@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,12 +9,7 @@ import (
 	"strings"
 )
 
-const ADDR string = "127.0.0.1:42434"
-
-type Notification struct {
-	Title   string
-	Content string
-}
+const DEFAULT_ADDR string = "127.0.0.1:42434"
 
 func splitArgs() (prog string, args []string) {
 	prog, args = os.Args[1], []string{}
@@ -34,19 +28,30 @@ func runCommand(prog string, args []string) {
 	}
 }
 
-func sendNotification(prog string) {
-	not := Notification{Title: prog, Content: "Command '" + strings.Join(os.Args[1:], " ") + "' finished."}
-	buf := &bytes.Buffer{}
+func getAddr() string {
+	addr := os.Getenv("NOTIFY_ADDR")
+	if addr != "" {
+		return addr
+	}
+	return DEFAULT_ADDR
+}
 
-	err := json.NewEncoder(buf).Encode(not)
-	if err != nil {
-		fmt.Printf("Could not encode json: %v\n", err)
-		os.Exit(1)
+func sendNotification() {
+	not := "Command '" + strings.Join(os.Args[1:], " ") + "' finished."
+	buf := &bytes.Buffer{}
+	fmt.Fprint(buf, not)
+
+	// Try sending through CLI first
+	cmd := exec.Command("/usr/bin/notify-send", "Notify", not)
+	err := cmd.Run()
+	if err == nil {
+		return
 	}
 
-	_, err = http.Post("http://"+ADDR, "application/json", buf)
+	// Try sending through API only if CLI fails
+	_, err = http.Post("http://"+getAddr(), "application/json", buf)
 	if err != nil {
-		fmt.Printf("Could not send notification: %v\n", err)
+		fmt.Printf("Could not send notification: %v", err)
 		os.Exit(1)
 	}
 }
@@ -58,5 +63,5 @@ func main() {
 	}
 	prog, args := splitArgs()
 	runCommand(prog, args)
-	sendNotification(prog)
+	sendNotification()
 }
