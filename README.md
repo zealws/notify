@@ -18,7 +18,13 @@ Example:
 
 ## Client/Server
 
-Start the server with `notify-serve`. You can then 
+Start the server with `notify-serve`. You can then send notifications with curl:
+
+    curl http://localhost:42434/ -d 'Notification here!'
+
+Or from a remote host via the `notify` utility. Just set the NOTIFY_ADDR to the `host:port` that the server is bound on:
+
+    NOTIFY_ADDR=1.2.3.4:42434 notify sleep 3
 
 ## Notifications over SSH
 
